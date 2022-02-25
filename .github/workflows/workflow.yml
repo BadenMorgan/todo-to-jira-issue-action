@@ -6,7 +6,10 @@ jobs:
     steps:
       - uses: "actions/checkout@master"
       - name: "TODO to Issue"
-        uses: "alstr/todo-to-issue-action@master"
+        uses: "BadenMorgan/todo-to-jira-issue-action@master"
         id: "todo"
         with:
           PROJECTS_SECRET: ${{ secrets.PROJECTS_SECRET }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.BADEN_JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN_HW }}

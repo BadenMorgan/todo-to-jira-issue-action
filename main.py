@@ -24,7 +24,7 @@ class Issue(object):
     """Basic Issue model for collecting the necessary info to send to GitHub."""
 
     def __init__(self, title, labels, assignees, milestone, user_projects, org_projects, body, hunk, file_name,
-                 start_line, markdown_language, status):
+                    start_line, markdown_language, status):
         self.title = title
         self.labels = labels
         self.assignees = assignees
@@ -120,10 +120,10 @@ class GitHubClient(object):
         issue_template = os.getenv('INPUT_ISSUE_TEMPLATE', None)
         if issue_template:
             issue_contents = (issue_template.replace('{{ title }}', issue.title)
-                              .replace('{{ body }}', formatted_issue_body)
-                              .replace('{{ url }}', url_to_line)
-                              .replace('{{ snippet }}', snippet)
-                              )
+                                .replace('{{ body }}', formatted_issue_body)
+                                .replace('{{ url }}', url_to_line)
+                                .replace('{{ snippet }}', snippet)
+                                )
         elif len(issue.body) != 0:
             issue_contents = formatted_issue_body + '\n\n' + url_to_line + '\n\n' + snippet
         else:
@@ -158,20 +158,20 @@ class GitHubClient(object):
             else:
                 print(f'Milestone {issue.milestone} does not exist! Dropping this parameter!')
 
-        new_issue_request = requests.post(url=self.issues_url, headers=self.issue_headers,
-                                          data=json.dumps(new_issue_body))
+        # new_issue_request = requests.post(url=self.issues_url, headers=self.issue_headers,
+        #                                     data=json.dumps(new_issue_body))
+
+        print(f"issue_url: {self.issue_url}")
+        print(f"new_issue_body: {new_issue_body}")
+        print(f"issue_headers: {self.issue_headers}")
 
         # Check if we should assign this issue to any projects.
-        if new_issue_request.status_code == 201 and (len(issue.user_projects) > 0 or len(issue.org_projects) > 0):
-            issue_json = new_issue_request.json()
-            issue_id = issue_json['id']
+        # if new_issue_request.status_code == 201 and (len(issue.user_projects) > 0 or len(issue.org_projects) > 0):
+        #     issue_json = new_issue_request.json()
+        #     issue_id = issue_json['id']
 
-            if len(issue.user_projects) > 0:
-                self.add_issue_to_projects(issue_id, issue.user_projects, 'user')
-            if len(issue.org_projects) > 0:
-                self.add_issue_to_projects(issue_id, issue.org_projects, 'org')
 
-        return new_issue_request.status_code
+        # return new_issue_request.status_code
 
     def close_issue(self, issue):
         """Check to see if this issue can be found on GitHub and if so close it."""
@@ -195,86 +195,9 @@ class GitHubClient(object):
             issue_comment_url = f'{self.repos_url}{self.repo}/issues/{issue_number}/comments'
             body = {'body': f'Closed in {self.sha}'}
             update_issue_request = requests.post(issue_comment_url, headers=self.issue_headers,
-                                                 data=json.dumps(body))
+                                                data=json.dumps(body))
             return update_issue_request.status_code
         return None
-
-    def add_issue_to_projects(self, issue_id, projects, projects_type):
-        """Attempt to add this issue to the specified user or organisation projects."""
-        projects_secret = os.getenv('INPUT_PROJECTS_SECRET', None)
-        if not projects_secret:
-            print('You need to create and set PROJECTS_SECRET to use projects')
-            return
-        projects_headers = {
-            'Accept': 'application/vnd.github.inertia-preview+json',
-            'Authorization': f'token {projects_secret}'
-        }
-
-        # Loop through all the projects that we should assign this issue to.
-        for i, project in enumerate(projects):
-            print(f'Adding issue to {projects_type} project {i + 1} of {len(projects)}')
-            project = project.replace(' / ', '/')
-            try:
-                entity_name, project_name, column_name = project.split('/')
-            except ValueError:
-                print('Invalid project syntax')
-                continue
-            entity_name = entity_name.strip()
-            project_name = project_name.strip()
-            column_name = column_name.strip()
-
-            if projects_type == 'user':
-                projects_url = f'{self.base_url}users/{entity_name}/projects'
-            elif projects_type == 'org':
-                projects_url = f'{self.base_url}orgs/{entity_name}/projects'
-            else:
-                return
-
-            # We need to use the project name to get its ID.
-            projects_request = requests.get(url=projects_url, headers=projects_headers)
-            if projects_request.status_code == 200:
-                projects_json = projects_request.json()
-                for project_dict in projects_json:
-                    if project_dict['name'].lower() == project_name.lower():
-                        project_id = project_dict['id']
-                        break
-                else:
-                    print('Project does not exist, skipping')
-                    continue
-            else:
-                print('An error occurred, skipping')
-                continue
-
-            # Use the project ID and column name to get the column ID.
-            columns_url = f'{self.base_url}projects/{project_id}/columns'
-            columns_request = requests.get(url=columns_url, headers=projects_headers)
-            if columns_request.status_code == 200:
-                columns_json = columns_request.json()
-                for column_dict in columns_json:
-                    if column_dict['name'].lower() == column_name.lower():
-                        column_id = column_dict['id']
-                        break
-                else:
-                    print('Column does not exist, skipping')
-                    continue
-            else:
-                print('An error occurred, skipping')
-                continue
-
-            # Use the column ID to assign the issue to the project.
-            new_card_url = f'{self.base_url}projects/columns/{column_id}/cards'
-            new_card_body = {
-                'content_id': int(issue_id),
-                'content_type': 'Issue'
-            }
-            new_card_request = requests.post(url=new_card_url, headers=projects_headers,
-                                             data=json.dumps(new_card_body))
-            if new_card_request.status_code == 201:
-                print('Issue card added to project')
-            else:
-                print('Issue card could not be added to project')
-
-
 class TodoParser(object):
     """Parser for extracting information from a given diff file."""
     FILE_HUNK_PATTERN = r'(?<=diff)(.*?)(?=diff\s--git\s)'
@@ -378,7 +301,7 @@ class TodoParser(object):
                 if prev_block and prev_block['file'] == block['file']:
                     code_blocks[prev_index]['hunk_end'] = line_numbers.start()
                     code_blocks[prev_index]['hunk'] = (prev_block['hunk']
-                                                       [prev_block['hunk_start']:line_numbers.start()])
+                                                        [prev_block['hunk_start']:line_numbers.start()])
                 elif prev_block:
                     code_blocks[prev_index]['hunk'] = prev_block['hunk'][prev_block['hunk_start']:]
 
@@ -412,7 +335,7 @@ class TodoParser(object):
                             issues.append(issue)
                 else:
                     comment_pattern = (r'(?:[+\-\s]\s*' + marker['pattern']['start'] + r'.*?'
-                                       + marker['pattern']['end'] + ')')
+                                        + marker['pattern']['end'] + ')')
                     comments = re.finditer(comment_pattern, block['hunk'], re.DOTALL)
                     extracted_comments = []
                     for i, comment in enumerate(comments):
@@ -630,11 +553,11 @@ if __name__ == "__main__":
                                                                                             'markdown_language')):
             similar_issues = list(similar_issues)
             if (len(similar_issues) == 2 and ((similar_issues[0].status == LineStatus.ADDED and
-                                               similar_issues[1].status == LineStatus.DELETED) or
-                                              (similar_issues[1].status == LineStatus.ADDED and
-                                               similar_issues[0].status == LineStatus.DELETED))):
+                                                similar_issues[1].status == LineStatus.DELETED) or
+                                                (similar_issues[1].status == LineStatus.ADDED and
+                                                similar_issues[0].status == LineStatus.DELETED))):
                 print(f'Issue "{values[0]}" appears as both addition and deletion. '
-                      f'Assuming this issue has been moved so skipping.')
+                        f'Assuming this issue has been moved so skipping.')
                 continue
             issues_to_process.extend(similar_issues)
         # Cycle through the Issue objects and create or close a corresponding GitHub issue for each.
